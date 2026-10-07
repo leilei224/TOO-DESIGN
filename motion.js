@@ -40,12 +40,12 @@
     const visual=lines.map(line=>line.split(/(\s+)/).map(token=>/\s|[\u3400-\u9fff]/.test(token)?chars(token):`<span class="tw-word">${chars(token)}</span>`).join('')).join('<br>');
     el.classList.add('typewriter');
     el.innerHTML=`<span class="visually-hidden">${esc(lines.join(' '))}</span><span class="tw-visual" aria-hidden="true">${visual}</span>`;
-    return {el,chars:[...el.querySelectorAll('.tw-char')],delay:el.tagName==='P'?34:46};
+    return {el,chars:[...el.querySelectorAll('.tw-char')],delay:el.tagName==='P'?22:30};
   }
   const typingGroups=[
     ['#work-title','.work-preface p'],
     ['.closing h2','.closing-main>div>p']
-  ].map(selectors=>({items:selectors.map(s=>prepareTyping(document.querySelector(s))),visible:false,item:0,char:0,timer:0,caret:null,done:false}));
+  ].map(selectors=>({items:selectors.map(s=>prepareTyping(document.querySelector(s))),visible:false,item:0,char:0,timer:0,caret:null,done:false,started:false}));
   function clearTypingTimer(group){clearTimeout(group.timer);group.timer=0}
   function clearTypingCaret(group){group.caret?.classList.remove('tw-caret');group.caret=null}
   function completeTyping(group){
@@ -73,8 +73,8 @@
   const typingObserver=new IntersectionObserver(entries=>{
     for(const entry of entries){
       const group=typingGroups.find(g=>g.items[0].el.parentElement===entry.target);
-      if(entry.isIntersecting&&entry.intersectionRatio>=.2&&!group.visible){group.visible=true;if(reduced.matches)completeTyping(group);else scheduleTyping(group,180)}
-      else if(!entry.isIntersecting){group.visible=false;if(!reduced.matches)resetTyping(group)}
+      if(entry.isIntersecting&&entry.intersectionRatio>=.2&&!group.visible){group.visible=true;group.started=true;if(reduced.matches)completeTyping(group);else if(!group.done)scheduleTyping(group,180)}
+      else if(!entry.isIntersecting){group.visible=false;if(group.started)completeTyping(group)}
     }
   },{threshold:[0,.2],rootMargin:'-78px 0px -25px 0px'});
   typingGroups.forEach(group=>{if(reduced.matches)completeTyping(group);else resetTyping(group);typingObserver.observe(group.items[0].el.parentElement)});
@@ -110,6 +110,7 @@
   document.addEventListener('pointerover',e=>{lastTarget=e.target;setCursorState(lastTarget)},{passive:true});
   document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')cursors.forEach(c=>c.classList.add('is-pressed'));else hideCursor()},{passive:true});
   document.addEventListener('pointerup',()=>cursors.forEach(c=>c.classList.remove('is-pressed')),{passive:true});
+  document.addEventListener('pointercancel',hideCursor,{passive:true});
   document.documentElement.addEventListener('pointerleave',hideCursor);
   window.addEventListener('blur',hideCursor);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)hideCursor()});
